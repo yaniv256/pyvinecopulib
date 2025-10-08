@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pyvinecopulib"
-version = "0.7.4"
+version = "0.7.5"
 authors = [
   { name = "Thibault Vatter", email = "info@vinecopulib.com" },
   { name = "Thomas Nagler", email = "info@vinecopulib.com" },
@@ -31,6 +31,7 @@ classifiers = [
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
   'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: 3.14',
   'License :: OSI Approved :: MIT License',
 ]
 
@@ -74,6 +75,9 @@ wheel.py-api = "cp312"
 [tool.cibuildwheel]
 # Necessary to see build output from the actual compilation
 build-verbosity = 1
+
+# Disable free-threading builds on all platforms
+skip = "cp3??t-*"
 
 # Run pytest to ensure that the package was correctly built
 test-command = "pytest -n auto {project}/tests"
