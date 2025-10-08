@@ -1,11 +1,13 @@
 from . import pyvinecopulib_ext
-from .pyvinecopulib_ext import (  # type: ignore[import]
+from .pair_copuladata import pairs_copula_data
+from .pyvinecopulib_ext import (
   Bicop,
   BicopFamily,
   CVineStructure,
   DVineStructure,
   FitControlsBicop,
   FitControlsVinecop,
+  Kde1d,
   RVineStructure,
   Vinecop,
   all,
@@ -40,6 +42,7 @@ from .pyvinecopulib_ext import (  # type: ignore[import]
   to_pseudo_obs,
   two_par,
   ut,
+  wdm,
 )
 
 # Version is that of the extension
@@ -55,12 +58,16 @@ __all__ = [
   "CVineStructure",
   "DVineStructure",
   "BicopFamily",
+  "Kde1d",
   # Functions
+  "benchmark",
+  "ghalton",
+  "pairs_copula_data",
   "simulate_uniform",
   "sobol",
-  "ghalton",
   "to_pseudo_obs",
   "benchmark",
+  "wdm",
   # Bicop families
   "indep",
   "gaussian",

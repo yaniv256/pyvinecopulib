@@ -1,5 +1,8 @@
 import collections
-from typing import Any
+from typing import Any, Optional
+
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from numpy.typing import ArrayLike
 
 class Bicop:
@@ -1231,6 +1234,7 @@ class FitControlsBicop:
     parametric_method: str = "mle",
     nonparametric_method: str = "constant",
     nonparametric_mult: float = 1.0,
+    nonparametric_grid_size: int = 30,
     selection_criterion: str = "bic",
     weights: ArrayLike = ...,
     psi0: float = 0.9,
@@ -1255,7 +1259,10 @@ class FitControlsBicop:
         ``"constant"``, ``"linear"``, ``"quadratic"``.
 
     nonparametric_mult :
-        A factor with which the smoothing parameters are multiplied.
+        A factor with which the smoothing parameters are multiplied (default: 1.0).
+
+    nonparametric_grid_size :
+        The grid size for the post-estimation interpolation in nonparametric models (default: 30).
 
     selection_criterion :
         The selection criterion (``"loglik"``, ``"aic"`` or ``"bic"``) for the pair copula families.
@@ -1286,6 +1293,10 @@ class FitControlsBicop:
   def family_set(self) -> Any: ...
   @family_set.setter
   def family_set(self, value: Any) -> None: ...
+  @property
+  def nonparametric_grid_size(self) -> Any: ...
+  @nonparametric_grid_size.setter
+  def nonparametric_grid_size(self, value: Any) -> None: ...
   @property
   def nonparametric_method(self) -> Any: ...
   @nonparametric_method.setter
@@ -1329,6 +1340,7 @@ class FitControlsVinecop:
     parametric_method: str = "mle",
     nonparametric_method: str = "constant",
     nonparametric_mult: float = 1.0,
+    nonparametric_grid_size: int = 30,
     trunc_lvl: int = 18446744073709551615,
     tree_criterion: str = "tau",
     threshold: float = 0.0,
@@ -1430,6 +1442,10 @@ class FitControlsVinecop:
   @family_set.setter
   def family_set(self, value: Any) -> None: ...
   @property
+  def nonparametric_grid_size(self) -> Any: ...
+  @nonparametric_grid_size.setter
+  def nonparametric_grid_size(self, value: Any) -> None: ...
+  @property
   def nonparametric_method(self) -> Any: ...
   @nonparametric_method.setter
   def nonparametric_method(self, value: Any) -> None: ...
@@ -1497,6 +1513,413 @@ class FitControlsVinecop:
   def weights(self) -> Any: ...
   @weights.setter
   def weights(self, value: Any) -> None: ...
+
+class Kde1d:
+  """
+  A class for univariate kernel density estimation.
+
+  The ``Kde1d`` class provides methods for univariate kernel density estimation
+  using local polynomial fitting. It can handle data with bounded, unbounded,
+  and discrete support.
+
+  The estimator uses a Gaussian kernel in all cases. A log-transform is used if
+  there is only one boundary; a probit transform is used if there are two
+  boundaries. Discrete variables are handled via jittering.
+
+  Zero-inflated densities are estimated by a hurdle-model with discrete mass at 0
+  and the remainder estimated as for continuous data.
+
+  Examples
+  --------
+  >>> import numpy as np
+  >>> import pyvinecopulib as pv
+  >>>
+  >>> # Unbounded data
+  >>> x = np.random.normal(0, 1, 500)
+  >>> fit = pv.Kde1d()
+  >>> fit.fit(x)
+  >>> pdf_vals = fit.pdf(np.array([0.0]))
+  >>> fit.plot(x)
+  >>>
+  >>> # Bounded data
+  >>> x = np.random.gamma(1, size=500)
+  >>> fit = pv.Kde1d(xmin=0.0, degree=1)
+  >>> fit.fit(x)
+  >>> fit.plot(x)
+  >>>
+  >>> # Discrete data
+  >>> x = np.random.binomial(5, 0.5, 500)
+  >>> fit = pv.Kde1d(xmin=0, xmax=5, type="discrete")
+  >>> fit.fit(x)
+  >>> fit.plot(x)
+
+  References
+  ----------
+  Geenens, G. (2014). *Probit transformation for kernel density estimation on
+  the unit interval.* Journal of the American Statistical Association,
+  109(505), 346–358.
+  [arXiv:1303.4121](https://arxiv.org/abs/1303.4121)
+
+  Geenens, G., & Wang, C. (2018). *Local-likelihood transformation kernel
+  density estimation for positive random variables.* Journal of Computational
+  and Graphical Statistics, 27(4), 822–835.
+  [arXiv:1602.04862](https://arxiv.org/abs/1602.04862)
+
+  Loader, C. (2006). *Local Regression and Likelihood.* Springer Science &
+  Business Media.
+
+  Nagler, T. (2018a). *A generic approach to nonparametric function estimation
+  with mixed data.* Statistics & Probability Letters, 137, 326–330.
+  [arXiv:1704.07457](https://arxiv.org/abs/1704.07457)
+
+  Nagler, T. (2018b). *Asymptotic analysis of the jittering kernel density
+  estimator.* Mathematical Methods of Statistics, 27, 32–46.
+  [arXiv:1705.05431](https://arxiv.org/abs/1705.05431)
+  """
+  def __init__(
+    self,
+    xmin: float | None = None,
+    xmax: float | None = None,
+    type: str = "continuous",
+    multiplier: float = 1.0,
+    bandwidth: float | None = None,
+    degree: int = 2,
+    grid_size: int = 400,
+  ) -> None:
+    """
+
+    Constructor for the ``Kde1d`` class.
+
+    Parameters
+    ----------
+    xmin : float, optional
+        Lower bound for the support of the density. ``NaN`` means no boundary.
+        Default is ``NaN``.
+    xmax : float, optional
+        Upper bound for the support of the density. ``NaN`` means no boundary.
+        Default is ``NaN``.
+    type : str, optional
+        Variable type. Must be one of ``"continuous"``, ``"discrete"``, or
+        ``"zero_inflated"``. Default is ``"continuous"``.
+    multiplier : float, optional
+        Bandwidth multiplier. The actual bandwidth used is ``bandwidth * multiplier``.
+        Default is 1.0.
+    bandwidth : float, optional
+        Bandwidth parameter. Must be a positive number or ``NaN`` for automatic
+        selection using the plug-in methodology. Default is ``NaN``.
+    degree : int, optional
+        Degree of the local polynomial. Either 0, 1, or 2 for log-constant,
+        log-linear, and log-quadratic fitting, respectively. Default is 2.
+    grid_size : int, optional
+        Number of grid points for the interpolation grid. Must be at least 4.
+        Default is 400.
+    """
+    ...
+
+  @property
+  def bandwidth(self) -> Any: ...
+  def cdf(self, x: ArrayLike, check_fitted: bool = True) -> ArrayLike:
+    """
+
+    Evaluate the cumulative distribution function.
+
+    Computes the cdf of the kernel density estimate by numerical integration.
+
+    Parameters
+    ----------
+    x : array_like
+        Vector of evaluation points.
+    check_fitted : bool, optional
+        Whether to check if the model is fitted before evaluation.
+        Default is ``True``.
+
+    Returns
+    -------
+    array_like
+        Vector of cdf values at the evaluation points.
+    """
+    ...
+
+  @property
+  def degree(self) -> Any: ...
+  @property
+  def edf(self) -> Any: ...
+  def fit(self, x: ArrayLike, weights: ArrayLike = ...) -> None:
+    """
+
+    Fit the kernel density estimate to data.
+
+    Parameters
+    ----------
+    x : array_like
+        Vector of observations to fit the density to.
+    weights : array_like, optional
+        Vector of weights for individual observations. If not provided,
+        all observations are weighted equally.
+
+    Notes
+    -----
+    After calling this method, the object will be fitted and can be used
+    for density evaluation, sampling, etc.
+    """
+    ...
+
+  @staticmethod
+  def from_grid(
+    grid_points: ArrayLike,
+    values: ArrayLike,
+    xmin: float | None = None,
+    xmax: float | None = None,
+    type: str = "continuous",
+    prob0: float = 0.0,
+  ) -> "Kde1d":
+    """
+
+    Create a Kde1d object from grid points and density values.
+
+    This factory method creates a Kde1d object from pre-computed grid points and
+    corresponding density values. This is useful for loading previously fitted
+    models or creating models from externally computed densities.
+
+    Parameters
+    ----------
+    grid_points : array_like
+        Vector of grid points where the density was evaluated.
+    values : array_like
+        Vector of density values corresponding to the grid points.
+        Must have the same length as ``grid_points``.
+    xmin : float, optional
+        Lower bound for the support of the density. Default is ``NaN``.
+    xmax : float, optional
+        Upper bound for the support of the density. Default is ``NaN``.
+    type : str, optional
+        Variable type. Default is ``"continuous"``.
+    prob0 : float, optional
+        Point mass at 0 (for zero-inflated models). Default is 0.0.
+
+    Returns
+    -------
+    Kde1d
+        A fitted Kde1d object ready for evaluation.
+    """
+    ...
+
+  @staticmethod
+  def from_params(
+    xmin: float | None = None,
+    xmax: float | None = None,
+    type: str = "continuous",
+    multiplier: float = 1.0,
+    bandwidth: float | None = None,
+    degree: int = 2,
+    grid_size: int = 400,
+  ) -> "Kde1d":
+    """
+
+    Create a Kde1d object from parameters.
+
+    This is a factory method that creates a Kde1d object with specified parameters.
+    The object needs to be fitted to data using the ``fit()`` method.
+
+    Parameters
+    ----------
+    xmin : float, optional
+        Lower bound for the support of the density. Default is ``NaN``.
+    xmax : float, optional
+        Upper bound for the support of the density. Default is ``NaN``.
+    type : str, optional
+        Variable type (``"continuous"``, ``"discrete"``, or ``"zero_inflated"``).
+        Default is ``"continuous"``.
+    multiplier : float, optional
+        Bandwidth multiplier. Default is 1.0.
+    bandwidth : float, optional
+        Bandwidth parameter (``NaN`` for automatic selection). Default is ``NaN``.
+    degree : int, optional
+        Degree of the local polynomial (0, 1, or 2). Default is 2.
+    grid_size : int, optional
+        Number of grid points for the interpolation grid. Must be at least 4.
+        Default is 400.
+
+    Returns
+    -------
+    Kde1d
+        A Kde1d object ready for fitting.
+    """
+    ...
+
+  @property
+  def grid_points(self) -> Any: ...
+  @property
+  def grid_size(self) -> Any: ...
+  @property
+  def loglik(self) -> Any: ...
+  @property
+  def multiplier(self) -> Any: ...
+  def pdf(self, x: ArrayLike, check_fitted: bool = True) -> ArrayLike:
+    """
+
+    Evaluate the probability density function.
+
+    Computes the pdf of the kernel density estimate by interpolation.
+
+    Parameters
+    ----------
+    x : array_like
+        Vector of evaluation points.
+    check_fitted : bool, optional
+        Whether to check if the model is fitted before evaluation.
+        Default is ``True``.
+
+    Returns
+    -------
+    array_like
+        Vector of pdf values at the evaluation points.
+    """
+    ...
+
+  def plot(
+    self,
+    xlim: object | None = None,
+    ylim: object | None = None,
+    grid_size: int = 200,
+    show_zero_mass: bool = True,
+  ) -> None:
+    """
+
+    Generates a plot for the Kde1d object.
+
+    This method creates a line plot for continuous data, a point plot for discrete data,
+    and handles zero-inflated data with special point marking at zero.
+
+    Parameters
+    ----------
+    xlim : tuple (default=None)
+        The limits for the x axis. Automatically set if None.
+    ylim : tuple (default=None)
+        The limits for the y axis. Automatically set if None.
+    grid_size : int (default=200)
+        The number of grid points to use for continuous data.
+    show_zero_mass : bool (default=True)
+        Whether to show the point mass at zero for zero-inflated data.
+    **kwargs
+        Additional keyword arguments passed to matplotlib plotting functions.
+
+    Returns
+    -------
+    Nothing, the function generates a plot and shows it using matplotlib.
+
+    Usage
+    -----
+    .. code-block:: python
+
+        import pyvinecopulib as pv
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        # Continuous data
+        np.random.seed(123)
+        x = np.random.beta(0.5, 2.0, 100)
+        kde = pv.Kde1d()
+        kde.fit(x)
+
+        plt.figure(figsize=(10, 6))
+        kde.plot()
+
+        # Discrete data
+        x_discrete = np.random.poisson(3, 100)
+        kde_discrete = pv.Kde1d(type="discrete")
+        kde_discrete.fit(x_discrete)
+        kde_discrete.plot()
+
+        # Zero-inflated data
+        x_zi = np.random.exponential(2, 100)
+        x_zi[np.random.choice(100, 30, replace=False)] = 0
+        kde_zi = pv.Kde1d(xmin=0, type="zero-inflated")
+        kde_zi.fit(x_zi)
+        kde_zi.plot()
+    """
+    ...
+
+  @property
+  def prob0(self) -> Any: ...
+  def quantile(self, x: ArrayLike, check_fitted: bool = True) -> ArrayLike:
+    """
+
+    Evaluate the quantile function.
+
+    Computes quantiles of the kernel density estimate by numerical inversion
+    of the cumulative distribution function.
+
+    Parameters
+    ----------
+    x : array_like
+        Vector of probabilities (between 0 and 1).
+    check_fitted : bool, optional
+        Whether to check if the model is fitted before evaluation.
+        Default is ``True``.
+
+    Returns
+    -------
+    array_like
+        Vector of quantiles corresponding to the input probabilities.
+    """
+    ...
+
+  def set_xmin_xmax(
+    self, xmin: float | None = None, xmax: float | None = None
+  ) -> None:
+    """
+
+    Set the boundary parameters.
+
+    Parameters
+    ----------
+    xmin : float, optional
+        Lower bound for the support. ``NaN`` means no boundary.
+        Default is ``NaN``.
+    xmax : float, optional
+        Upper bound for the support. ``NaN`` means no boundary.
+        Default is ``NaN``.
+    """
+    ...
+
+  def simulate(
+    self,
+    n: int,
+    seeds: collections.abc.Sequence[int] = [],
+    check_fitted: bool = True,
+  ) -> ArrayLike:
+    """
+
+    Simulate data from the fitted density.
+
+    Generates random samples from the kernel density estimate.
+
+    Parameters
+    ----------
+    n : int
+        Number of observations to simulate.
+    seeds : list of int, optional
+        Optional vector of random seeds for reproducibility.
+    check_fitted : bool, optional
+        Whether to check if the model is fitted before simulation.
+        Default is ``True``.
+
+    Returns
+    -------
+    array_like
+        Vector of simulated observations from the kernel density.
+    """
+    ...
+
+  @property
+  def type(self) -> Any: ...
+  @property
+  def values(self) -> Any: ...
+  @property
+  def xmax(self) -> Any: ...
+  @property
+  def xmin(self) -> Any: ...
 
 class RVineStructure:
   """
@@ -2667,6 +3090,39 @@ nonparametric: list[BicopFamily] = ...
 
 one_par: list[BicopFamily] = ...
 
+def pairs_copula_data(
+  data: ArrayLike,
+  main: str = "",
+  cols: Optional[list[str]] = None,
+  grid_size: int = 50,
+  bins: int = 20,
+  scatter_size: float = 6.0,
+) -> tuple[Figure, Axes]:
+  """
+  Pair plot for copula data U in (0,1)^d using pure Matplotlib.
+  - Lower: bivariate copula density contours (fitted with pyvinecopulib), drawn in z-space.
+  - Upper: scatter with Kendall's tau annotation (copula space).
+  - Diagonal: histograms (copula space).
+
+  Parameters
+  ----------
+  data : (n,d) array-like
+      Copula data with entries strictly in (0,1).
+  main : str
+      Figure title.
+  grid_size : int
+      Resolution of the contour grid per dimension (lower panels). Must be positive.
+  bins : int
+      Number of histogram bins (diagonal). Must be positive.
+  scatter_size : float
+      Marker size for upper-panel scatter. Must be positive.
+
+  Returns
+  -------
+  fig, axes : matplotlib Figure and Axes array of shape (d, d)
+  """
+  ...
+
 parametric: list[BicopFamily] = ...
 
 rotationless: list[BicopFamily] = ...
@@ -2772,3 +3228,42 @@ def to_pseudo_obs(
 two_par: list[BicopFamily] = ...
 
 ut: list[BicopFamily] = ...
+
+def wdm(
+  x: ArrayLike,
+  y: ArrayLike,
+  method: str,
+  weights: ArrayLike = ...,
+  remove_missing: bool = True,
+) -> float:
+  """
+
+  Calculates (weighted) dependence measures.
+
+  This function computes various measures of dependence between two variables, optionally
+  using observation weights.
+
+  Parameters
+  ----------
+  x, y :
+      Input data vectors.
+  method :
+      The dependence measure to compute. Possible values are:
+
+      - ``"pearson"``, ``"prho"``, ``"cor"`` : Pearson correlation
+      - ``"spearman"``, ``"srho"``, ``"rho"`` : Spearman’s :math:`\rho`
+      - ``"kendall"``, ``"ktau"``, ``"tau"`` : Kendall’s :math:`\tau`
+      - ``"blomqvist"``, ``"bbeta"``, ``"beta"`` : Blomqvist’s :math:`\beta`
+      - ``"hoeffding"``, ``"hoeffd"``, ``"d"`` : Hoeffding’s :math:`D`
+  weights :
+      Optional vector of observation weights.
+  remove_missing :
+      If ``True``, all observations containing a ``NaN`` are removed. Otherwise, an error is raised
+      if missing values are present.
+
+  Returns
+  -------
+  float
+      The computed dependence measure.
+  """
+  ...

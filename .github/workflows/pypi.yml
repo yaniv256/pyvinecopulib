@@ -76,9 +76,14 @@ jobs:
           boost_version: ${{ env.BOOST_VERSION }}
           eigen_version: ${{ env.EIGEN_VERSION }}
           wdm: "false"
+      - name: Clean build artefacts
+        shell: bash
+        run: |
+          rm -rf build wheelhouse
       - name: Build and test wheels
         uses: pypa/cibuildwheel@v2.20.0
         env:
+          CIBW_REBUILD: 1
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.cfg.cibw_id }}
           CIBW_ENVIRONMENT_WINDOWS: Boost_INCLUDE_DIR='${{steps.install-dependencies.outputs.BOOST_ROOT}}\include' EIGEN3_INCLUDE_DIR='C:\ProgramData\chocolatey\lib\eigen\include'
           CIBW_ENVIRONMENT_MACOS: "Boost_INCLUDE_DIR=${{steps.install-dependencies.outputs.BOOST_ROOT}}/include EIGEN3_INCLUDE_DIR=${{matrix.cfg.root_install_dir}}/include/eigen3"
@@ -89,6 +94,14 @@ jobs:
         run: |
           echo "Checking stub files in wheel:"
           wheel=$(ls wheelhouse/*.whl)
+
+          # Verify the wheel is a valid ZIP archive
+          unzip -t "$wheel" >/dev/null || {
+            echo "::error file=$wheel::Corrupted or invalid wheel archive"
+            exit 1
+          }
+
+          # Check for stub or typing marker files
           unzip -l "$wheel" | grep -E '(__init__\.pyi|py\.typed)' || {
             echo "::error ::Expected stub or marker files not found in $wheel"
             exit 1
@@ -212,6 +225,11 @@ jobs:
           export Boost_INCLUDE_DIR=$Boost_INCLUDE_DIR
           export EIGEN3_INCLUDE_DIR=$EIGEN3_INCLUDE_DIR
           pip install dist/*.tar.gz
+      - name: Install dev dependencies for testing
+        run: |
+          pip install tomli  # Needed for Python < 3.11
+          python scripts/get_dependencies.py dev --as-requirements > requirements.txt
+          pip install -r requirements.txt
       - name: Run tests
         run: |
           pytest tests/ -r a
@@ -237,8 +255,8 @@ jobs:
           merge-multiple: true
       - name: Publish distribution Test PyPI
         if: |
-          job.status == 'success' 
-            && github.base_ref == 'main' 
+          job.status == 'success'
+            && github.base_ref == 'main'
             && github.head_ref == 'dev'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -247,8 +265,8 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
       - name: Publish distribution to PyPI
         if: |
-          job.status == 'success' 
-            && github.event_name == 'push' 
+          job.status == 'success'
+            && github.event_name == 'push'
             && startsWith(github.event.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
