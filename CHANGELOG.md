@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.6
+
+### New features in `pyvinecopulib`
+
+- Add `fit_vine_incomplete` and `get_complete_counts` helpers for fitting vine copulas with incomplete data and inspecting per-edge observation counts.
+- Add example notebook `examples/08_incomplete_data.ipynb` demonstrating adaptive truncation on datasets with missing values.
+
+### Bug fixes / maintenance
+
+- Harden plotting/type helpers: improve axes handling in `pairs_copuladata.py`, ensure uniform-margin adjustment uses arrays, and adjust mypy config to target Python 3.11 and scope checks to `src` only.
+
 ## 0.7.5
 
 ### New features in `pyvinecopulib`
