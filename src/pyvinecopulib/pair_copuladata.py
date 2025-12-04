@@ -4,20 +4,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 from ._python_helpers.stats import norm_cdf, norm_pdf
 from .pyvinecopulib_ext import Bicop, BicopFamily, FitControlsBicop, wdm
 
 
 def pairs_copula_data(
-  data: ArrayLike,
+  data: ArrayLike | None,
   main: str = "",
   cols: Optional[list[str]] = None,
   grid_size: int = 50,
   bins: int = 20,
   scatter_size: float = 6.0,
-) -> tuple[Figure, Axes]:
+) -> tuple[Figure, NDArray[np.object_]]:
   """
   Pair plot for copula data U in (0,1)^d using pure Matplotlib.
   - Lower: bivariate copula density contours (fitted with pyvinecopulib), drawn in z-space.
@@ -93,8 +93,11 @@ def pairs_copula_data(
   fig, axes = plt.subplots(
     d, d, figsize=(2.8 * d, 2.8 * d), sharex=False, sharey=False
   )
-  if d == 1:
-    axes = np.array([[axes]])
+  if isinstance(axes, np.ndarray):
+    axes_grid: NDArray[np.object_] = axes.reshape(d, d)
+  else:
+    axes_grid = np.empty((d, d), dtype=object)
+    axes_grid.fill(axes)
 
   # Helpers for consistent styling
   def set_zspace(ax: Axes) -> None:
@@ -112,7 +115,7 @@ def pairs_copula_data(
   # Main loop
   for i in range(d):
     for j in range(d):
-      ax = axes[i, j]
+      ax = axes_grid[i, j]
       if i == j:
         # Diagonal: histogram in copula space
         x = U[:, j].flatten()
@@ -214,4 +217,4 @@ def pairs_copula_data(
     fig.suptitle(main, y=1.02)
 
   plt.tight_layout(rect=(0, 0, 1, 0.97))
-  return fig, axes
+  return fig, axes_grid

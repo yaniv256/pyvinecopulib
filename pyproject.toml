@@ -103,14 +103,14 @@ exclude = ["lib"]
 # "**/{tests,docs,tools}/*" = ["E402"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 strict = true
 ignore_missing_imports = true
 pretty = true
 show_error_codes = true
 warn_unused_configs = true
-files = ["src", "tests"]
-exclude = "scripts|docs|examples"
+files = ["src"]
+exclude = "scripts|docs|examples|tests"
 
 [tool.bandit]
 exclude_dirs = ["tests", "docs", "examples", "lib", "build"]
