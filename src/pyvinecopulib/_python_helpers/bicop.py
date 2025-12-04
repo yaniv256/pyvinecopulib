@@ -89,7 +89,7 @@ def bicop_plot(
 
     g = np.meshgrid(points, points)
     points = g[0][0]
-    adj = 1
+    adj = np.ones_like(points, dtype=float)
     levels = [0.2, 0.6, 1, 1.5, 2, 3, 5, 10, 20]
     xlabel = "u1"
     ylabel = "u2"
