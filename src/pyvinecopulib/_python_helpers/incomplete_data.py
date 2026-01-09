@@ -279,3 +279,66 @@ def get_complete_counts(
       counts[(tree, edge, tuple(conditioning_set))] = n_valid
 
   return counts
+
+
+def to_pseudo_obs_incomplete(
+  data: NDArray[np.floating],
+  ties_method: str = "average",
+) -> NDArray[np.floating]:
+  """
+  Transform data to pseudo-observations, handling missing values per column.
+
+  Applies the empirical probability integral transform to each column
+  independently, using only the non-missing values in that column. Missing
+  values (np.nan) are preserved in the output.
+
+  This is useful when different variables have different observation counts
+  (e.g., time series with different start dates).
+
+  Parameters
+  ----------
+  data : ndarray of shape (n, d)
+      Data matrix. Use np.nan for missing values.
+
+  ties_method : str, default="average"
+      Method for handling tied values. Options:
+      - "average": Average ranks for tied values
+      - "first": Ranks assigned in order of appearance
+      - "random": Random ranks for tied values
+
+  Returns
+  -------
+  pseudo_obs : ndarray of shape (n, d)
+      Pseudo-observations in [0, 1]. Missing values remain as np.nan.
+
+  Examples
+  --------
+  >>> import numpy as np
+  >>> data = np.array([[1.0, np.nan], [2.0, 1.0], [3.0, 2.0]])
+  >>> to_pseudo_obs_incomplete(data)
+  array([[0.25,  nan],
+         [0.5 , 0.33],
+         [0.75, 0.67]])
+
+  See Also
+  --------
+  pyvinecopulib.to_pseudo_obs : Standard transform requiring complete data.
+  """
+  data = np.asarray(data, dtype=np.float64)
+  if data.ndim == 1:
+    data = data.reshape(-1, 1)
+
+  n, d = data.shape
+  result = np.full_like(data, np.nan)
+
+  for j in range(d):
+    valid_mask = ~np.isnan(data[:, j])
+    if not np.any(valid_mask):
+      continue
+
+    col_data = data[valid_mask, j].reshape(-1, 1)
+    # Use the C++ implementation for the actual ranking
+    pseudo = pv.pyvinecopulib_ext.to_pseudo_obs(col_data, ties_method)
+    result[valid_mask, j] = pseudo.ravel()
+
+  return result

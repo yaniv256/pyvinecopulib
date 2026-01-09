@@ -1,8 +1,9 @@
 from . import pyvinecopulib_ext
 from .pair_copuladata import pairs_copula_data
 from ._python_helpers.incomplete_data import (
-    fit_vine_incomplete,
-    get_complete_counts,
+  fit_vine_incomplete,
+  get_complete_counts,
+  to_pseudo_obs_incomplete,
 )
 from .pyvinecopulib_ext import (
   Bicop,
@@ -58,6 +59,7 @@ __all__ = [
   # Incomplete data fitting
   "fit_vine_incomplete",
   "get_complete_counts",
+  "to_pseudo_obs_incomplete",
   "Vinecop",
   "FitControlsBicop",
   "FitControlsVinecop",
