@@ -92,7 +92,19 @@ mamba activate pyvinecopulib
 ```
 
 Alternatively, you can specify manually the location of `Eigen` and `Boost` using the environment variables `EIGEN3_INCLUDE_DIR` and `Boost_INCLUDE_DIR` respectively.
-On Linux, you can install the required packages and set the environment variables as follows:
+
+On **macOS** (with Homebrew):
+
+```bash
+brew install eigen boost
+EIGEN3_INCLUDE_DIR=/opt/homebrew/opt/eigen/include/eigen3 \
+Boost_INCLUDE_DIR=/opt/homebrew/opt/boost/include \
+pip install .
+```
+
+> **Note**: If you have Anaconda installed, its older Boost version may cause C++17 compatibility errors. Using Homebrew's Boost (as shown above) resolves this.
+
+On **Linux**:
 
 ```bash
 sudo apt-get install libeigen3-dev libboost-all-dev
