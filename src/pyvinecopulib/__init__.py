@@ -12,6 +12,7 @@ from ._python_helpers.human_json import (
   from_human_json,
   FAMILY_PARAMETERS,
 )
+from ._python_helpers.named_vinecop import NamedVinecop
 from .pyvinecopulib_ext import (
   Bicop,
   BicopFamily,
@@ -63,6 +64,8 @@ __version__ = "0.7.6+yaniv1"
 __all__ = [
   # Core classes
   "Bicop",
+  "Vinecop",
+  "NamedVinecop",
   # Incomplete data fitting
   "fit_vine_incomplete",
   "get_complete_counts",
@@ -73,7 +76,6 @@ __all__ = [
   "to_human_json",
   "from_human_json",
   "FAMILY_PARAMETERS",
-  "Vinecop",
   "FitControlsBicop",
   "FitControlsVinecop",
   "RVineStructure",
