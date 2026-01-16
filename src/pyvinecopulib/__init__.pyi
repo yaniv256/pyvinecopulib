@@ -2961,7 +2961,7 @@ class Vinecop:
   def taus(self) -> Any: ...
   @property
   def threshold(self) -> Any: ...
-  def to_file(self, filename: str) -> None:
+  def to_file(self, filename: str, indent: int = -1) -> None:
     """
 
     Writes the copula object into a JSON file.
@@ -2976,23 +2976,32 @@ class Vinecop:
     ----------
     filename :
         The name of the JSON file to write.
+    indent :
+        Indentation level for pretty-printing. Use -1 (default) for compact output,
+        or a non-negative integer (e.g., 2) for human-readable indented output.
     """
     ...
 
-  def to_json(self) -> str:
+  def to_json(self, indent: int = -1) -> str:
     """
 
-    Converts the copula into a nlohmann::json object.
+    Converts the copula into a JSON string.
 
-    The JSON-like `str` object contains two nodes : ``"structure"`` for the vine structure, which
+    The JSON string contains two nodes : ``"structure"`` for the vine structure, which
     itself contains nodes ``"array"`` for the structure triangular array and ``"order"`` for the order
     vector, and ``"pair copulas"``. The former two encode the R-Vine structure and the latter is a list
     of child nodes for the trees (``"tree1"``, ``"tree2"``, etc), each containing a list of child nodes
     for the edges (``"pc1"``, ``"pc2"``, etc). See Bicop::to_json() for the encoding of pair-copulas.
 
+    Parameters
+    ----------
+    indent :
+        Indentation level for pretty-printing. Use -1 (default) for compact output,
+        or a non-negative integer (e.g., 2) for human-readable indented output.
+
     Returns
     -------
-    the nlohmann::json object containing the copula.
+    the JSON string containing the copula.
     """
     ...
 

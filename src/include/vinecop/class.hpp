@@ -165,12 +165,15 @@ are:
       .def_static("from_json", &vc_from_json, "json"_a, "check"_a = true,
                   vinecop_doc.ctor.doc_2args_input_check,
                   nb::call_guard<nb::gil_scoped_release>())
-      .def("to_file", &Vinecop::to_file, "filename"_a, vinecop_doc.to_file.doc,
-           nb::call_guard<nb::gil_scoped_release>())
+      .def("to_file", &Vinecop::to_file, "filename"_a, "indent"_a = -1,
+           vinecop_doc.to_file.doc, nb::call_guard<nb::gil_scoped_release>())
       .def(
           "to_json",
-          [](Vinecop& self) -> std::string { return self.to_json().dump(); },
-          vinecop_doc.to_json.doc, nb::call_guard<nb::gil_scoped_release>())
+          [](Vinecop& self, int indent) -> std::string {
+            return self.to_json().dump(indent);
+          },
+          "indent"_a = -1, vinecop_doc.to_json.doc,
+          nb::call_guard<nb::gil_scoped_release>())
       .def_prop_rw("var_types", &Vinecop::get_var_types,
                    &Vinecop::set_var_types, "The types of each variables.",
                    nb::call_guard<nb::gil_scoped_release>())

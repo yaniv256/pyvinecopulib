@@ -5,6 +5,13 @@ from ._python_helpers.incomplete_data import (
   get_complete_counts,
   to_pseudo_obs_incomplete,
 )
+from ._python_helpers.human_json import (
+  native_to_human,
+  human_to_native,
+  to_human_json,
+  from_human_json,
+  FAMILY_PARAMETERS,
+)
 from .pyvinecopulib_ext import (
   Bicop,
   BicopFamily,
@@ -60,6 +67,12 @@ __all__ = [
   "fit_vine_incomplete",
   "get_complete_counts",
   "to_pseudo_obs_incomplete",
+  # Human-readable JSON
+  "native_to_human",
+  "human_to_native",
+  "to_human_json",
+  "from_human_json",
+  "FAMILY_PARAMETERS",
   "Vinecop",
   "FitControlsBicop",
   "FitControlsVinecop",
