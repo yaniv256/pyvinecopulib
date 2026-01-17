@@ -59,7 +59,7 @@ from .pyvinecopulib_ext import (
 )
 
 # Version includes local suffix for forked releases
-__version__ = "0.7.6+yaniv1"
+__version__ = "0.7.7+yaniv1"
 
 __all__ = [
   # Core classes
